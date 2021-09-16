@@ -42,6 +42,7 @@ module.exports.updateUser = (req, res, next) => {
     })
     .catch(next);
 };
+
 module.exports.createUser = (req, res, next) => {
   const {
     name, email, password,
@@ -66,15 +67,20 @@ module.exports.createUser = (req, res, next) => {
 
 module.exports.login = (req, res, next) => {
   const { email, password } = req.body;
-
-  return User.findUserByCredentials(email, password)
+  User.findOne({ email }).select('+password')
     .then((user) => {
-      const token = jwt.sign({ _id: user._id }, NODE_ENV === 'production' ? JWT_SECRET : 'dev-secret', { expiresIn: '7d' });
-
-      res.send({ token });
-    })
-    .catch(() => {
-      throw new UnauthorizedError('Ошибка авторизации');
+      if (!user) {
+        throw new UnauthorizedError('Неправильные почта или пароль');
+      }
+      bcrypt.compare(password, user.password)
+        .then((matched) => {
+          if (!matched) {
+            throw new UnauthorizedError('Неправильные почта или пароль');
+          }
+          const token = jwt.sign({ _id: user._id }, NODE_ENV === 'production' ? JWT_SECRET : 'dev-secret', { expiresIn: '7d' });
+          res.send({ token });
+        })
+        .catch(next);
     })
     .catch(next);
 };
