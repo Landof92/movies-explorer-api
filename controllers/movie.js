@@ -30,8 +30,9 @@ module.exports.deleteMovie = (req, res, next) => {
     .orFail(new NotFoundError('Фильм с указанным _id не найден'))
     .then((movie) => {
       if (movie.owner.equals(userId)) {
-        return Movie.findByIdAndRemove(movie._id)
-          .then((movies) => res.status(200).send(movies));
+        return Movie.findById(movie._id)
+          .then((movies) => movies.remove()
+            .then(() => res.send({ message: movie })));
       }
       throw new ForbiddenError('Нельзя удалить чужую карточку фильма');
     })

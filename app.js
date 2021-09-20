@@ -1,27 +1,26 @@
 require('dotenv').config();
+
+const { NODE_ENV, MONGO_URL } = process.env;
 const express = require('express');
+const helmet = require('helmet');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
-const { celebrate } = require('celebrate');
-const Joi = require('joi');
 const { errors } = require('celebrate');
-const authorization = require('./middlewares/auth');
-const {
-  createUser, login,
-} = require('./controllers/users');
 const { errorHandler } = require('./errors/error-handler');
-const NotFoundError = require('./errors/not-found-err');
 const { requestLogger, errorLogger } = require('./middlewares/logger');
 const checkCors = require('./utils/cors');
 
 const { PORT = 3000 } = process.env;
 const app = express();
-mongoose.connect('mongodb://localhost:27017/moviesdb', {
-  useNewUrlParser: true,
-  useCreateIndex: true,
-  useFindAndModify: false,
-  useUnifiedTopology: true,
-});
+app.use(helmet());
+mongoose.connect(
+  NODE_ENV === 'production' ? MONGO_URL : 'mongodb://localhost:27017/moviesdb', {
+    useNewUrlParser: true,
+    useCreateIndex: true,
+    useFindAndModify: false,
+    useUnifiedTopology: true,
+  },
+);
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -29,28 +28,7 @@ app.use(checkCors);
 
 app.use(requestLogger);
 
-app.post('/signin', celebrate({
-  body: Joi.object().keys({
-    email: Joi.string().required().email(),
-    password: Joi.string().required(),
-  }),
-}), login);
-
-app.post('/signup', celebrate({
-  body: Joi.object().keys({
-    name: Joi.string().min(2).max(30),
-    email: Joi.string().required().email(),
-    password: Joi.string().required(),
-  }),
-}), createUser);
-
-app.use('/users', authorization, require('./routes/users'));
-
-app.use('/movies', authorization, require('./routes/movie'));
-
-app.use((req, res, next) => {
-  next(new NotFoundError('Запрашиваемый ресурс не найден'));
-});
+app.use(require('./routes/index'));
 
 app.use(errorLogger);
 

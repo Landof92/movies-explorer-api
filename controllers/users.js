@@ -12,12 +12,6 @@ module.exports.userMe = (req, res, next) => {
   return User.findById(_id)
     .orFail(new NotFoundError('Пользователь по указанному _id не найден'))
     .then((user) => res.status(200).send(user))
-    .catch((err) => {
-      if (err.name === 'CastError') {
-        throw new BadRequestError('Невалидный id');
-      }
-      throw err;
-    })
     .catch(next);
 };
 
@@ -35,6 +29,9 @@ module.exports.updateUser = (req, res, next) => {
     .orFail(new NotFoundError('Пользователь по указанному _id не найден'))
     .then((user) => res.status(200).send(user))
     .catch((err) => {
+      if (err.name === 'MongoError' && err.code === 11000) {
+        throw new AlreadyExistsError('Такой пользователь уже существует');
+      }
       if (err.name === 'ValidationError' || err.name === 'CastError') {
         throw new BadRequestError(err.name === 'ValidationError' ? 'Переданы некорректные данные при обновлении профиля' : 'Невалидный id');
       }
