@@ -1,10 +1,10 @@
-const Movie = require('../models/movie');
-const NotFoundError = require('../errors/not-found-err');
-const BadRequestError = require('../errors/bad-request-err');
-const ForbiddenError = require('../errors/forbidden-err');
+const Movie = require("../models/movie");
+const NotFoundError = require("../errors/not-found-err");
+const BadRequestError = require("../errors/bad-request-err");
+const ForbiddenError = require("../errors/forbidden-err");
 
 module.exports.getMovie = (req, res, next) => {
-  Movie.find({})
+  Movie.find({ owner: req.user._id })
     .then((movies) => res.status(200).send(movies))
     .catch(next);
 };
@@ -15,8 +15,12 @@ module.exports.createMovie = (req, res, next) => {
   Movie.create({ ...body, owner: req.user._id })
     .then((movie) => res.status(200).send(movie))
     .catch((err) => {
-      if (err.name === 'ValidationError' || err.name === 'CastError') {
-        throw new BadRequestError(err.name === 'ValidationError' ? 'Переданы некорректные данные при создании карточки фильма' : 'Невалидный id');
+      if (err.name === "ValidationError" || err.name === "CastError") {
+        throw new BadRequestError(
+          err.name === "ValidationError"
+            ? "Переданы некорректные данные при создании карточки фильма"
+            : "Невалидный id"
+        );
       }
       throw err;
     })
@@ -27,18 +31,18 @@ module.exports.deleteMovie = (req, res, next) => {
   const userId = req.user._id;
 
   Movie.findById(req.params.movieId)
-    .orFail(new NotFoundError('Фильм с указанным _id не найден'))
+    .orFail(new NotFoundError("Фильм с указанным _id не найден"))
     .then((movie) => {
       if (movie.owner.equals(userId)) {
-        return Movie.findById(movie._id)
-          .then((movies) => movies.remove()
-            .then(() => res.send({ message: movie })));
+        return Movie.findById(movie._id).then((movies) =>
+          movies.remove().then(() => res.send({ message: movie }))
+        );
       }
-      throw new ForbiddenError('Нельзя удалить чужую карточку фильма');
+      throw new ForbiddenError("Нельзя удалить чужую карточку фильма");
     })
     .catch((err) => {
-      if (err.name === 'CastError') {
-        throw new BadRequestError('Невалидный id');
+      if (err.name === "CastError") {
+        throw new BadRequestError("Невалидный id");
       }
       throw err;
     })
